@@ -59,6 +59,13 @@ export function ProductTable({
       const response = batchId
         ? await getBatchProducts(batchId, page, perPage)
         : await getProducts(page, perPage);
+
+      // If current page is greater than last_page (e.g. after deleting items on last page), automatically navigate to the previous valid page
+      if (response.meta.last_page > 0 && page > response.meta.last_page) {
+        setPage(response.meta.last_page);
+        return;
+      }
+
       setData(response);
       if (onTotalCountChange) {
         onTotalCountChange(response.meta.total, response.meta.max_limit);

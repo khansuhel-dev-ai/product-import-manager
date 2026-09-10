@@ -3,7 +3,7 @@ import type { ImportBatch, ImportStatus } from '../types/import';
 import { getBatchStatus } from '../services/importService';
 
 const TERMINAL_STATUSES: ImportStatus[] = ['completed', 'completed_with_errors', 'failed'];
-const POLL_INTERVAL_MS = 3000;
+const POLL_INTERVAL_MS = 2000;
 const MAX_POLLS = 100;
 
 interface UseImportStatusResult {
@@ -14,7 +14,7 @@ interface UseImportStatusResult {
   stopPolling: () => void;
 }
 
-export function useImportStatus(): UseImportStatusResult {
+export function useImportStatus(onComplete?: (batch: ImportBatch) => void): UseImportStatusResult {
   const [batch, setBatch] = useState<ImportBatch | null>(null);
   const [isPolling, setIsPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,6 +22,11 @@ export function useImportStatus(): UseImportStatusResult {
   const intervalRef = useRef<number | null>(null);
   const pollCountRef = useRef(0);
   const batchIdRef = useRef<number | null>(null);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   const stopPolling = useCallback(() => {
     if (intervalRef.current !== null) {
@@ -48,6 +53,9 @@ export function useImportStatus(): UseImportStatusResult {
 
       if (TERMINAL_STATUSES.includes(response.data.status)) {
         stopPolling();
+        if (onCompleteRef.current) {
+          onCompleteRef.current(response.data);
+        }
       }
     } catch {
       stopPolling();
@@ -81,4 +89,3 @@ export function useImportStatus(): UseImportStatusResult {
 
   return { batch, isPolling, error, startPolling, stopPolling };
 }
-

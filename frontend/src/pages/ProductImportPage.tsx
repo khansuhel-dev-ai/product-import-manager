@@ -20,7 +20,12 @@ export function ProductImportPage() {
   const [totalProducts, setTotalProducts] = useState(0);
   const [maxLimit, setMaxLimit] = useState(500);
 
-  const { batch, isPolling, error: pollingError, startPolling } = useImportStatus();
+  // Auto refresh table when async polling reaches completion
+  const handleImportComplete = useCallback(() => {
+    setProductRefreshKey((k) => k + 1);
+  }, []);
+
+  const { batch, isPolling, error: pollingError, startPolling } = useImportStatus(handleImportComplete);
 
   const handleTotalCountChange = useCallback((count: number, limit?: number) => {
     setTotalProducts(count);
@@ -37,6 +42,9 @@ export function ProductImportPage() {
       const response = await uploadCsv(file);
       setUploadMessage(response.message);
 
+      // Instantly trigger product table refresh on upload response
+      setProductRefreshKey((k) => k + 1);
+
       if (response.status === 'pending') {
         // Queued — start polling
         startPolling(response.batch_id);
@@ -46,7 +54,6 @@ export function ProductImportPage() {
         if (response.errors && response.errors.length > 0) {
           setSyncErrors(response.errors);
         }
-        setProductRefreshKey((k) => k + 1);
       }
     } catch (err: unknown) {
       const apiErr = err as { message?: string; errors?: Record<string, string[]> };
@@ -72,8 +79,10 @@ export function ProductImportPage() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>Product Import Manager</h1>
-        <p className="subtitle">Upload CSV files, manage product catalog, and edit/delete products</p>
+        <div className="header-content">
+          <h1>Product Import Manager</h1>
+          <p className="subtitle">Upload CSV files, manage product catalog, and edit/delete products</p>
+        </div>
       </header>
 
       <main className="app-main">

@@ -30,3 +30,4 @@ export function StorageLimitBanner({ totalCount, maxLimit = 500 }: StorageLimitB
     </div>
   );
 }
+

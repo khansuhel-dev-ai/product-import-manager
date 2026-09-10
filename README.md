@@ -45,7 +45,7 @@ product-import-manager/
 │   ├── public/            # Static assets
 │   ├── package.json       # Frontend dependencies & scripts
 │   └── vite.config.ts     # Vite configuration
-└── backend-staging/       # Laravel application source code
+└── backend/              # Laravel application source code
     ├── app/               # Models, Controllers, Services, Jobs, Resources
     ├── config/            # Application & import configurations
     ├── database/          # Migrations & Seeders
@@ -123,9 +123,9 @@ No PHP or MySQL setup is required for Option A.
    CREATE DATABASE product_import_manager CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
    ```
 
-3. **Setup Backend (`backend-staging`)**
+3. **Setup Backend (`backend`)**
    ```bash
-   cd backend-staging
+   cd backend
    ```
 
    *If setting up a fresh Laravel environment:*
@@ -198,7 +198,7 @@ npm run lint
 
 ### Backend PHPUnit Tests (Laravel)
 ```bash
-cd backend-staging
+cd backend
 php artisan test
 ```
 

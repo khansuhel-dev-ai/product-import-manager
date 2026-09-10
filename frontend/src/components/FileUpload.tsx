@@ -4,11 +4,17 @@ interface FileUploadProps {
   onUpload: (file: File) => void;
   isUploading: boolean;
   maxSizeMB?: number;
+  isLimitReached?: boolean;
 }
 
 const ACCEPTED_TYPES = '.csv';
 
-export function FileUpload({ onUpload, isUploading, maxSizeMB = 2 }: FileUploadProps) {
+export function FileUpload({
+  onUpload,
+  isUploading,
+  maxSizeMB = 2,
+  isLimitReached = false,
+}: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -18,6 +24,12 @@ export function FileUpload({ onUpload, isUploading, maxSizeMB = 2 }: FileUploadP
     const file = e.target.files?.[0] ?? null;
 
     if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+
+    if (isLimitReached) {
+      setFileError('System limit reached (500 products). Please delete existing products before uploading more.');
       setSelectedFile(null);
       return;
     }
@@ -40,6 +52,10 @@ export function FileUpload({ onUpload, isUploading, maxSizeMB = 2 }: FileUploadP
   };
 
   const handleUpload = () => {
+    if (isLimitReached) {
+      setFileError('System limit reached (500 products). Please delete existing products first.');
+      return;
+    }
     if (selectedFile && !isUploading) {
       onUpload(selectedFile);
     }
@@ -69,11 +85,15 @@ export function FileUpload({ onUpload, isUploading, maxSizeMB = 2 }: FileUploadP
           type="file"
           accept={ACCEPTED_TYPES}
           onChange={handleFileSelect}
-          disabled={isUploading}
+          disabled={isUploading || isLimitReached}
           id="csv-file-input"
         />
-        <label htmlFor="csv-file-input" className="file-input-label">
-          {selectedFile ? selectedFile.name : 'Choose a CSV file...'}
+        <label htmlFor="csv-file-input" className={`file-input-label ${isLimitReached ? 'disabled' : ''}`}>
+          {isLimitReached
+            ? '⚠️ Upload disabled (500 product limit reached)'
+            : selectedFile
+            ? selectedFile.name
+            : 'Choose a CSV file...'}
         </label>
       </div>
 
@@ -85,6 +105,11 @@ export function FileUpload({ onUpload, isUploading, maxSizeMB = 2 }: FileUploadP
       )}
 
       {fileError && <p className="error-text">{fileError}</p>}
+      {isLimitReached && (
+        <p className="error-text card-alert">
+          Limit reached: The system cannot store more than 500 products. Delete existing products to enable CSV import.
+        </p>
+      )}
 
       <p className="help-text">
         Accepted: CSV files up to {maxSizeMB} MB
@@ -94,9 +119,9 @@ export function FileUpload({ onUpload, isUploading, maxSizeMB = 2 }: FileUploadP
         <button
           className="btn btn-primary"
           onClick={handleUpload}
-          disabled={!selectedFile || isUploading}
+          disabled={!selectedFile || isUploading || isLimitReached}
         >
-          {isUploading ? 'Uploading...' : 'Upload'}
+          {isUploading ? 'Uploading...' : 'Upload CSV'}
         </button>
         <button
           className="btn btn-secondary"
@@ -109,4 +134,3 @@ export function FileUpload({ onUpload, isUploading, maxSizeMB = 2 }: FileUploadP
     </div>
   );
 }
-

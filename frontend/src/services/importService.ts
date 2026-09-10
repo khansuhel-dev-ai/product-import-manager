@@ -16,12 +16,12 @@ export async function getBatchErrors(batchId: number): Promise<{ data: ImportErr
 
 export async function getBatchProducts(
   batchId: number,
-  page = 1
+  page = 1,
+  perPage = 25
 ): Promise<PaginatedResponse<Product>> {
-  return api.get<PaginatedResponse<Product>>(`/products/import/${batchId}/products?page=${page}`);
+  return api.get<PaginatedResponse<Product>>(`/products/import/${batchId}/products?page=${page}&per_page=${perPage}`);
 }
 
 export async function downloadSample(): Promise<void> {
   return api.downloadFile('/products/sample', 'product-import-template.csv');
 }
-

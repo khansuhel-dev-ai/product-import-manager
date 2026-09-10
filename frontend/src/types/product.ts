@@ -10,6 +10,33 @@ export interface Product {
   updated_at: string;
 }
 
+export interface CreateProductInput {
+  sku: string;
+  name: string;
+  category: string;
+  price: number;
+  quantity: number;
+}
+
+export interface UpdateProductInput {
+  sku?: string;
+  name?: string;
+  category?: string;
+  price?: number;
+  quantity?: number;
+}
+
+export interface BulkUpdateInput {
+  ids: number[];
+  category?: string;
+  price?: number;
+  quantity?: number;
+}
+
+export interface BulkDeleteInput {
+  ids: number[];
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   meta: {
@@ -17,6 +44,7 @@ export interface PaginatedResponse<T> {
     last_page: number;
     per_page: number;
     total: number;
+    max_limit?: number;
   };
   links: {
     first: string | null;
@@ -25,4 +53,3 @@ export interface PaginatedResponse<T> {
     next: string | null;
   };
 }
-

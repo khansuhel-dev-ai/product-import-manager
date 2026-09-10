@@ -22,7 +22,7 @@
   --color-border: #e2e8f0;
   --radius: 8px;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --max-width: 960px;
+  --max-width: 1040px;
 }
 
 body {
@@ -78,6 +78,67 @@ body {
   border-top: 1px solid var(--color-border);
 }
 
+/* ===== Storage Limit Notice Banner ===== */
+.storage-banner {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow);
+}
+
+.storage-banner.storage-full {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.storage-banner-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.925rem;
+  color: #1e3a8a;
+}
+
+.storage-banner.storage-full .storage-banner-header {
+  color: #991b1b;
+}
+
+.banner-icon {
+  font-size: 1.2rem;
+}
+
+.banner-alert {
+  font-weight: 600;
+  color: var(--color-error);
+}
+
+.storage-progress-bar {
+  margin-top: 0.6rem;
+  height: 6px;
+  background: #e0e7ff;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.storage-banner.storage-full .storage-progress-bar {
+  background: #fee2e2;
+}
+
+.storage-progress-fill {
+  height: 100%;
+  background: var(--color-primary);
+  transition: width 0.3s ease;
+}
+
+.storage-progress-fill.fill-warning {
+  background: var(--color-warning);
+}
+
+.storage-progress-fill.fill-full {
+  background: var(--color-error);
+}
+
 /* ===== Top Section (Upload + Sample side by side) ===== */
 .top-section {
   display: grid;
@@ -100,6 +161,11 @@ body {
   box-shadow: var(--shadow);
 }
 
+.card-error {
+  border-color: #fca5a5;
+  background: #fff5f5;
+}
+
 .card h2 {
   font-size: 1.1rem;
   font-weight: 600;
@@ -107,11 +173,28 @@ body {
   color: var(--color-text);
 }
 
+.card-alert {
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+/* ===== Alerts ===== */
+.alert-success {
+  background: #dcfce7;
+  color: #15803d;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  border: 1px solid #bbf7d0;
+}
+
 /* ===== Buttons ===== */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.4rem;
   padding: 0.6rem 1.25rem;
   font-size: 0.9rem;
   font-weight: 500;
@@ -147,9 +230,44 @@ body {
   color: var(--color-secondary-hover);
 }
 
+.btn-danger {
+  background: #ef4444;
+  color: #fff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
 .btn-sm {
   padding: 0.35rem 0.75rem;
   font-size: 0.85rem;
+}
+
+.btn-icon {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  transition: background 0.15s;
+}
+
+.btn-icon-edit {
+  color: var(--color-primary);
+}
+
+.btn-icon-edit:hover {
+  background: #eff6ff;
+}
+
+.btn-icon-delete {
+  color: var(--color-error);
+}
+
+.btn-icon-delete:hover {
+  background: #fef2f2;
 }
 
 .button-group {
@@ -158,10 +276,25 @@ body {
   margin-top: 1rem;
 }
 
-.view-toggle {
+/* ===== Table Header Row ===== */
+.table-header-row {
   display: flex;
-  gap: 0.75rem;
+  justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.table-header-row h2 {
+  margin-bottom: 0;
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
 /* ===== File Input ===== */
@@ -190,9 +323,16 @@ body {
   font-size: 0.9rem;
 }
 
-.file-input-label:hover {
+.file-input-label:hover:not(.disabled) {
   border-color: var(--color-primary);
   background: #f0f4ff;
+}
+
+.file-input-label.disabled {
+  background: #f1f5f9;
+  cursor: not-allowed;
+  border-color: #cbd5e1;
+  color: #94a3b8;
 }
 
 .file-info {
@@ -215,12 +355,6 @@ body {
 .help-text {
   font-size: 0.85rem;
   color: var(--color-text-muted);
-}
-
-.info-text {
-  font-size: 0.9rem;
-  color: var(--color-primary);
-  padding: 0.5rem 0;
 }
 
 .error-text {
@@ -366,6 +500,10 @@ tbody tr:hover {
   background: #f8fafc;
 }
 
+tr.selected-row {
+  background: #eff6ff !important;
+}
+
 .mono {
   font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.825rem;
@@ -375,25 +513,195 @@ tbody tr:hover {
   text-align: right;
 }
 
+.text-center {
+  text-align: center;
+}
+
 .text-muted {
   color: var(--color-text-muted);
   font-size: 0.825rem;
 }
 
-/* ===== Pagination ===== */
-.pagination {
+.actions-cell {
+  display: flex;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+/* ===== Pagination Bar ===== */
+.pagination-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 1rem;
   margin-top: 1rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--color-border);
 }
 
-.page-info {
+.pagination-info {
   font-size: 0.85rem;
+  color: var(--color-secondary);
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.per-page-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--color-secondary);
+  margin-right: 0.5rem;
+}
+
+.per-page-selector select {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  font-size: 0.85rem;
+  background: var(--color-surface);
+}
+
+.page-badge {
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0 0.5rem;
+  color: var(--color-text);
+}
+
+/* ===== Modals ===== */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  width: 100%;
+  max-width: 500px;
+  padding: 1.5rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.75rem;
+}
+
+.modal-header h3 {
+  font-size: 1.15rem;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
   color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.modal-close-btn:hover {
+  color: var(--color-text);
+}
+
+.modal-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-group.border-group {
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: #f8fafc;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.form-group input[type='text'],
+.form-group input[type='number'] {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.form-group input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
 }
 
 /* ===== Responsive ===== */
@@ -417,5 +725,14 @@ tbody tr:hover {
   thead th,
   tbody td {
     padding: 0.4rem 0.5rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .pagination-bar {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

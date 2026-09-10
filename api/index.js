@@ -1,3 +1,5 @@
+const MAX_PRODUCTS = 500;
+
 const products = [
   { id: 1, sku: 'SKU-1001', name: 'Ronaldo Home Jersey', category: 'Football Jerseys', price: 1999.00, quantity: 25, import_batch_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 2, sku: 'SKU-1002', name: 'Madrid Training Jersey', category: 'Training Wear', price: 1499.00, quantity: 15, import_batch_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
@@ -7,10 +9,11 @@ const products = [
 const batches = new Map();
 const batchErrors = new Map();
 let batchIdCounter = 1;
+let productIdCounter = 4;
 
 function setCorsHeaders(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
 }
 
@@ -28,14 +31,35 @@ export default async function handler(req, res) {
     return;
   }
 
-  const urlPath = (req.url || '').split('?')[0];
+  const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const urlPath = urlObj.pathname;
 
   // GET /api/products
   if (req.method === 'GET' && (urlPath === '/api/products' || urlPath === '/products')) {
+    const page = parseInt(urlObj.searchParams.get('page') || '1', 10);
+    const perPage = parseInt(urlObj.searchParams.get('per_page') || '25', 10);
+    
+    const startIndex = (page - 1) * perPage;
+    const endIndex = startIndex + perPage;
+    const paginatedItems = products.slice(startIndex, endIndex);
+    const total = products.length;
+    const lastPage = Math.max(1, Math.ceil(total / perPage));
+
     return res.status(200).json({
-      data: products,
-      meta: { current_page: 1, last_page: 1, per_page: 15, total: products.length },
-      links: { first: '/api/products?page=1', last: '/api/products?page=1', prev: null, next: null }
+      data: paginatedItems,
+      meta: {
+        current_page: page,
+        last_page: lastPage,
+        per_page: perPage,
+        total: total,
+        max_limit: MAX_PRODUCTS
+      },
+      links: {
+        first: `/api/products?page=1&per_page=${perPage}`,
+        last: `/api/products?page=${lastPage}&per_page=${perPage}`,
+        prev: page > 1 ? `/api/products?page=${page - 1}&per_page=${perPage}` : null,
+        next: page < lastPage ? `/api/products?page=${page + 1}&per_page=${perPage}` : null
+      }
     });
   }
 
@@ -70,20 +94,159 @@ export default async function handler(req, res) {
   const matchBatchProducts = urlPath.match(/^\/(?:api\/)?products\/import\/(\d+)\/products$/);
   if (req.method === 'GET' && matchBatchProducts) {
     const id = parseInt(matchBatchProducts[1], 10);
+    const page = parseInt(urlObj.searchParams.get('page') || '1', 10);
+    const perPage = parseInt(urlObj.searchParams.get('per_page') || '25', 10);
+    
     const batchProds = products.filter(p => p.import_batch_id === id);
+    const startIndex = (page - 1) * perPage;
+    const paginated = batchProds.slice(startIndex, startIndex + perPage);
+    const lastPage = Math.max(1, Math.ceil(batchProds.length / perPage));
+
     return res.status(200).json({
-      data: batchProds,
-      meta: { current_page: 1, last_page: 1, per_page: 15, total: batchProds.length },
+      data: paginated,
+      meta: { current_page: page, last_page: lastPage, per_page: perPage, total: batchProds.length },
       links: { first: null, last: null, prev: null, next: null }
     });
+  }
+
+  // POST /api/products/bulk-update
+  if (req.method === 'POST' && (urlPath === '/api/products/bulk-update' || urlPath === '/products/bulk-update')) {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+    const { ids, category, price, quantity } = body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(422).json({ message: 'No product IDs provided for bulk update.' });
+    }
+
+    let updatedCount = 0;
+    products.forEach(p => {
+      if (ids.includes(p.id)) {
+        if (category !== undefined && category !== null && category !== '') p.category = category;
+        if (price !== undefined && price !== null && !isNaN(Number(price))) p.price = Number(price);
+        if (quantity !== undefined && quantity !== null && !isNaN(Number(quantity))) p.quantity = Number(quantity);
+        p.updated_at = new Date().toISOString();
+        updatedCount++;
+      }
+    });
+
+    return res.status(200).json({ message: `${updatedCount} product(s) updated successfully.`, count: updatedCount });
+  }
+
+  // POST /api/products/bulk-delete
+  if (req.method === 'POST' && (urlPath === '/api/products/bulk-delete' || urlPath === '/products/bulk-delete')) {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+    const { ids } = body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(422).json({ message: 'No product IDs provided for deletion.' });
+    }
+
+    const initialLen = products.length;
+    for (let i = products.length - 1; i >= 0; i--) {
+      if (ids.includes(products[i].id)) {
+        products.splice(i, 1);
+      }
+    }
+    const deletedCount = initialLen - products.length;
+
+    return res.status(200).json({ message: `${deletedCount} product(s) deleted successfully.`, count: deletedCount });
+  }
+
+  // POST /api/products (Manual single product addition)
+  if (req.method === 'POST' && (urlPath === '/api/products' || urlPath === '/products')) {
+    if (products.length >= MAX_PRODUCTS) {
+      return res.status(422).json({
+        message: `System storage limit reached (${MAX_PRODUCTS} products). Please delete existing products before adding more.`
+      });
+    }
+
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+    const { sku, name, category, price, quantity } = body;
+
+    if (!sku || !name || !category || price === undefined || quantity === undefined) {
+      return res.status(422).json({ message: 'All fields (SKU, Name, Category, Price, Quantity) are required.' });
+    }
+
+    if (products.some(p => p.sku.toUpperCase() === String(sku).trim().toUpperCase())) {
+      return res.status(422).json({ message: `Product with SKU "${sku}" already exists.` });
+    }
+
+    const numPrice = parseFloat(price);
+    const numQty = parseInt(quantity, 10);
+    if (isNaN(numPrice) || numPrice < 0) {
+      return res.status(422).json({ message: 'Price must be a non-negative number.' });
+    }
+    if (isNaN(numQty) || numQty < 0) {
+      return res.status(422).json({ message: 'Quantity must be a non-negative integer.' });
+    }
+
+    const newProduct = {
+      id: productIdCounter++,
+      sku: String(sku).trim(),
+      name: String(name).trim(),
+      category: String(category).trim(),
+      price: numPrice,
+      quantity: numQty,
+      import_batch_id: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    products.push(newProduct);
+    return res.status(201).json({ message: 'Product created successfully.', data: newProduct });
+  }
+
+  // PUT /api/products/:id
+  const matchSingleProduct = urlPath.match(/^\/(?:api\/)?products\/(\d+)$/);
+  if (req.method === 'PUT' && matchSingleProduct) {
+    const id = parseInt(matchSingleProduct[1], 10);
+    const productIdx = products.findIndex(p => p.id === id);
+    if (productIdx === -1) {
+      return res.status(404).json({ message: 'Product not found.' });
+    }
+
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+    const { sku, name, category, price, quantity } = body;
+
+    if (sku && products.some(p => p.id !== id && p.sku.toUpperCase() === String(sku).trim().toUpperCase())) {
+      return res.status(422).json({ message: `Another product with SKU "${sku}" already exists.` });
+    }
+
+    const prod = products[productIdx];
+    if (sku) prod.sku = String(sku).trim();
+    if (name) prod.name = String(name).trim();
+    if (category) prod.category = String(category).trim();
+    if (price !== undefined) prod.price = parseFloat(price);
+    if (quantity !== undefined) prod.quantity = parseInt(quantity, 10);
+    prod.updated_at = new Date().toISOString();
+
+    return res.status(200).json({ message: 'Product updated successfully.', data: prod });
+  }
+
+  // DELETE /api/products/:id
+  if (req.method === 'DELETE' && matchSingleProduct) {
+    const id = parseInt(matchSingleProduct[1], 10);
+    const productIdx = products.findIndex(p => p.id === id);
+    if (productIdx === -1) {
+      return res.status(404).json({ message: 'Product not found.' });
+    }
+
+    const deleted = products.splice(productIdx, 1)[0];
+    return res.status(200).json({ message: `Product "${deleted.sku}" deleted successfully.`, data: deleted });
   }
 
   // POST /api/products/import
   if (req.method === 'POST' && (urlPath === '/api/products/import' || urlPath === '/products/import')) {
     const chunks = [];
-    for await (const chunk of req) {
-      chunks.push(chunk);
-    }
+    for await (const chunk of req) chunks.push(chunk);
     const bodyString = Buffer.concat(chunks).toString('utf8');
 
     const lines = bodyString.split(/\r?\n/).filter(l => l.trim().length > 0);
@@ -111,6 +274,28 @@ export default async function handler(req, res) {
     }
 
     const dataRows = csvLines.slice(1);
+
+    // Calculate potential new SKUs to check 500 limit
+    const incomingSkus = new Set();
+    dataRows.forEach(line => {
+      const parts = line.split(',').map(p => p.trim());
+      if (parts[0]) incomingSkus.add(parts[0].toUpperCase());
+    });
+
+    let newSkuCount = 0;
+    incomingSkus.forEach(sku => {
+      if (!products.some(p => p.sku.toUpperCase() === sku)) {
+        newSkuCount++;
+      }
+    });
+
+    if (products.length + newSkuCount > MAX_PRODUCTS) {
+      return res.status(422).json({
+        message: `Storage limit exceeded! Adding ${newSkuCount} new product(s) would exceed the maximum limit of ${MAX_PRODUCTS} products (Currently: ${products.length}/${MAX_PRODUCTS}). Please delete existing products first.`,
+        errors: { file: [`Storage limit reached (${products.length}/${MAX_PRODUCTS} products stored).`] }
+      });
+    }
+
     const batchId = batchIdCounter++;
     const totalRows = dataRows.length;
     const isQueued = totalRows > 50;
@@ -166,7 +351,7 @@ export default async function handler(req, res) {
       if (existingIdx !== -1) {
         products[existingIdx] = { ...products[existingIdx], name, category, price, quantity: qty, import_batch_id: batchId, updated_at: new Date().toISOString() };
       } else {
-        products.push({ id: products.length + 1, sku, name, category, price, quantity: qty, import_batch_id: batchId, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+        products.push({ id: productIdCounter++, sku, name, category, price, quantity: qty, import_batch_id: batchId, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
       }
     });
 

@@ -4,21 +4,28 @@ import { SampleDownload } from '../components/SampleDownload';
 import { ImportStatus } from '../components/ImportStatus';
 import { ImportErrors } from '../components/ImportErrors';
 import { ProductTable } from '../components/ProductTable';
+import { StorageLimitBanner } from '../components/StorageLimitBanner';
 import { useImportStatus } from '../hooks/useImportStatus';
 import { uploadCsv } from '../services/importService';
 import type { ImportError } from '../types/import';
-
-type ViewMode = 'import' | 'all-products';
 
 export function ProductImportPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [syncErrors, setSyncErrors] = useState<ImportError[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>('import');
   const [productRefreshKey, setProductRefreshKey] = useState(0);
 
+  // Storage count tracking
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [maxLimit, setMaxLimit] = useState(500);
+
   const { batch, isPolling, error: pollingError, startPolling } = useImportStatus();
+
+  const handleTotalCountChange = useCallback((count: number, limit?: number) => {
+    setTotalProducts(count);
+    if (limit) setMaxLimit(limit);
+  }, []);
 
   const handleUpload = useCallback(async (file: File) => {
     setIsUploading(true);
@@ -60,22 +67,31 @@ export function ProductImportPage() {
     || batch?.status === 'completed_with_errors'
     || batch?.status === 'failed';
 
+  const isLimitReached = totalProducts >= maxLimit;
+
   return (
     <div className="app-container">
       <header className="app-header">
         <h1>Product Import Manager</h1>
-        <p className="subtitle">Upload CSV files to import products into the catalog</p>
+        <p className="subtitle">Upload CSV files, manage product catalog, and edit/delete products</p>
       </header>
 
       <main className="app-main">
+        {/* Storage Limit Banner Notice */}
+        <StorageLimitBanner totalCount={totalProducts} maxLimit={maxLimit} />
+
         <div className="top-section">
-          <FileUpload onUpload={handleUpload} isUploading={isUploading} />
+          <FileUpload
+            onUpload={handleUpload}
+            isUploading={isUploading}
+            isLimitReached={isLimitReached}
+          />
           <SampleDownload />
         </div>
 
         {uploadError && (
-          <div className="card">
-            <p className="error-text">{uploadError}</p>
+          <div className="card card-error">
+            <p className="error-text">⚠️ {uploadError}</p>
           </div>
         )}
 
@@ -86,7 +102,7 @@ export function ProductImportPage() {
           uploadMessage={uploadMessage}
         />
 
-        {/* Show errors from synchronous import or fetch from API for async */}
+        {/* Validation Errors */}
         {syncErrors.length > 0 && (
           <div className="card">
             <h2>Validation Errors</h2>
@@ -117,48 +133,17 @@ export function ProductImportPage() {
           <ImportErrors batchId={currentBatchId} failedRows={failedRows} />
         )}
 
-        {isTerminal && batch && batch.successful_rows > 0 && (
-          <ProductTable
-            batchId={currentBatchId}
-            title="Imported Products"
-            refreshKey={productRefreshKey}
-          />
-        )}
-
-        <div className="card">
-          <div className="view-toggle">
-            <button
-              className={`btn ${viewMode === 'all-products' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => {
-                setViewMode('all-products');
-                setProductRefreshKey((k) => k + 1);
-              }}
-            >
-              View All Products
-            </button>
-            {viewMode === 'all-products' && (
-              <button
-                className="btn btn-secondary"
-                onClick={() => setViewMode('import')}
-              >
-                Hide
-              </button>
-            )}
-          </div>
-        </div>
-
-        {viewMode === 'all-products' && (
-          <ProductTable
-            title="All Products"
-            refreshKey={productRefreshKey}
-          />
-        )}
+        {/* Main Product Table - Shows All Products (25 per page) */}
+        <ProductTable
+          title="All Products Catalog"
+          refreshKey={productRefreshKey}
+          onTotalCountChange={handleTotalCountChange}
+        />
       </main>
 
       <footer className="app-footer">
-        <p>Product Import Manager — Take-Home Assessment</p>
+        <p>Product Import Manager — Maximum Storage Limit: 500 Products</p>
       </footer>
     </div>
   );
 }
-

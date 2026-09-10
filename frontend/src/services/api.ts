@@ -21,6 +21,43 @@ class ApiClient {
     return response.json();
   }
 
+  async post<T>(path: string, body?: unknown): Promise<T> {
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!response.ok) {
+      const error = await this.parseError(response);
+      throw error;
+    }
+    return response.json();
+  }
+
+  async put<T>(path: string, body: unknown): Promise<T> {
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const error = await this.parseError(response);
+      throw error;
+    }
+    return response.json();
+  }
+
+  async delete<T>(path: string): Promise<T> {
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const error = await this.parseError(response);
+      throw error;
+    }
+    return response.json();
+  }
+
   async postFile<T>(path: string, file: File, fieldName = 'file'): Promise<T> {
     const formData = new FormData();
     formData.append(fieldName, file);
@@ -69,4 +106,3 @@ class ApiClient {
 }
 
 export const api = new ApiClient(API_BASE_URL);
-

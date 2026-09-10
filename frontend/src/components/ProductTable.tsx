@@ -11,19 +11,27 @@ import {
 import { getBatchProducts } from '../services/importService';
 import { ProductFormModal } from './ProductFormModal';
 import { BulkEditModal } from './BulkEditModal';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface ProductTableProps {
   batchId?: number | null;
   title?: string;
   refreshKey?: number;
   onTotalCountChange?: (count: number, maxLimit?: number) => void;
+  onMutation?: () => void;
 }
+
+type DeleteTarget =
+  | { type: 'single'; product: Product }
+  | { type: 'bulk'; ids: number[] }
+  | null;
 
 export function ProductTable({
   batchId,
   title = 'Products Catalog',
   refreshKey = 0,
   onTotalCountChange,
+  onMutation,
 }: ProductTableProps) {
   const [data, setData] = useState<PaginatedResponse<Product> | null>(null);
   const [page, setPage] = useState(1);
@@ -39,6 +47,10 @@ export function ProductTable({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
+
+  // Delete modal state
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
@@ -69,6 +81,12 @@ export function ProductTable({
     setTimeout(() => setSuccessMessage(null), 4000);
   };
 
+  const triggerMutation = () => {
+    if (onMutation) {
+      onMutation();
+    }
+  };
+
   // Selection handlers
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!data) return;
@@ -94,6 +112,7 @@ export function ProductTable({
 
   // Single Add / Edit Submit
   const handleFormSubmit = async (input: CreateProductInput | UpdateProductInput) => {
+    triggerMutation();
     if (editingProduct) {
       // Edit
       const res = await updateProduct(editingProduct.id, input as UpdateProductInput);
@@ -106,48 +125,38 @@ export function ProductTable({
     fetchProducts();
   };
 
-  // Single Delete
-  const handleDeleteSingle = async (product: Product) => {
-    if (!window.confirm(`Are you sure you want to delete product "${product.name}" (${product.sku})?`)) {
-      return;
-    }
-    try {
-      const res = await deleteProduct(product.id);
-      showNotification(res.message || 'Product deleted.');
-      setSelectedIds((prev) => prev.filter((id) => id !== product.id));
-      fetchProducts();
-    } catch (err: unknown) {
-      const apiErr = err as { message?: string };
-      setError(apiErr.message || 'Failed to delete product.');
-    }
-  };
-
   // Bulk Edit Submit
   const handleBulkEditSubmit = async (payload: BulkUpdateInput) => {
+    triggerMutation();
     const res = await bulkUpdateProducts(payload);
     showNotification(res.message || 'Bulk update applied.');
     setSelectedIds([]);
     fetchProducts();
   };
 
-  // Bulk Delete
-  const handleBulkDelete = async () => {
-    if (selectedIds.length === 0) return;
-    if (
-      !window.confirm(
-        `Are you sure you want to delete ${selectedIds.length} selected product(s)? This action cannot be undone.`
-      )
-    ) {
-      return;
-    }
+  // Delete Action Execution
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    triggerMutation();
+
     try {
-      const res = await bulkDeleteProducts({ ids: selectedIds });
-      showNotification(res.message || 'Selected products deleted.');
-      setSelectedIds([]);
+      if (deleteTarget.type === 'single') {
+        const res = await deleteProduct(deleteTarget.product.id);
+        showNotification(res.message || 'Product deleted successfully.');
+        setSelectedIds((prev) => prev.filter((id) => id !== deleteTarget.product.id));
+      } else if (deleteTarget.type === 'bulk') {
+        const res = await bulkDeleteProducts({ ids: deleteTarget.ids });
+        showNotification(res.message || 'Selected products deleted successfully.');
+        setSelectedIds([]);
+      }
+      setDeleteTarget(null);
       fetchProducts();
     } catch (err: unknown) {
       const apiErr = err as { message?: string };
-      setError(apiErr.message || 'Failed to delete selected products.');
+      setError(apiErr.message || 'Failed to delete product(s).');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -200,7 +209,7 @@ export function ProductTable({
               </button>
               <button
                 className="btn btn-danger"
-                onClick={handleBulkDelete}
+                onClick={() => setDeleteTarget({ type: 'bulk', ids: selectedIds })}
               >
                 🗑️ Delete Selected ({selectedIds.length})
               </button>
@@ -272,7 +281,7 @@ export function ProductTable({
                         <button
                           className="btn-icon btn-icon-delete"
                           title="Delete Product"
-                          onClick={() => handleDeleteSingle(product)}
+                          onClick={() => setDeleteTarget({ type: 'single', product })}
                         >
                           <span>🗑️</span>
                         </button>
@@ -366,6 +375,20 @@ export function ProductTable({
         selectedIds={selectedIds}
         onClose={() => setIsBulkEditModalOpen(false)}
         onSubmit={handleBulkEditSubmit}
+      />
+
+      {/* Custom Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={Boolean(deleteTarget)}
+        title={deleteTarget?.type === 'bulk' ? `Delete ${deleteTarget.ids.length} Products` : 'Delete Product'}
+        message={
+          deleteTarget?.type === 'single'
+            ? `Are you sure you want to delete product "${deleteTarget.product.name}" (${deleteTarget.product.sku})?`
+            : `Are you sure you want to delete ${deleteTarget?.type === 'bulk' ? deleteTarget.ids.length : 0} selected products?`
+        }
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isDeleting}
       />
     </div>
   );

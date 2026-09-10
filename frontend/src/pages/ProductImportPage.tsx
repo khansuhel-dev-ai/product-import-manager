@@ -25,7 +25,15 @@ export function ProductImportPage() {
     setProductRefreshKey((k) => k + 1);
   }, []);
 
-  const { batch, isPolling, error: pollingError, startPolling } = useImportStatus(handleImportComplete);
+  const { batch, isPolling, error: pollingError, startPolling, resetStatus } = useImportStatus(handleImportComplete);
+
+  // Clear import status and validation errors when user performs Add, Edit, or Delete actions
+  const handleProductMutation = useCallback(() => {
+    setUploadMessage(null);
+    setUploadError(null);
+    setSyncErrors([]);
+    resetStatus();
+  }, [resetStatus]);
 
   const handleTotalCountChange = useCallback((count: number, limit?: number) => {
     setTotalProducts(count);
@@ -147,6 +155,7 @@ export function ProductImportPage() {
           title="All Products Catalog"
           refreshKey={productRefreshKey}
           onTotalCountChange={handleTotalCountChange}
+          onMutation={handleProductMutation}
         />
       </main>
 

@@ -12,6 +12,7 @@ interface UseImportStatusResult {
   error: string | null;
   startPolling: (batchId: number) => void;
   stopPolling: () => void;
+  resetStatus: () => void;
 }
 
 export function useImportStatus(onComplete?: (batch: ImportBatch) => void): UseImportStatusResult {
@@ -36,6 +37,13 @@ export function useImportStatus(onComplete?: (batch: ImportBatch) => void): UseI
     setIsPolling(false);
     pollCountRef.current = 0;
   }, []);
+
+  const resetStatus = useCallback(() => {
+    stopPolling();
+    batchIdRef.current = null;
+    setBatch(null);
+    setError(null);
+  }, [stopPolling]);
 
   const poll = useCallback(async () => {
     if (batchIdRef.current === null) return;
@@ -87,5 +95,5 @@ export function useImportStatus(onComplete?: (batch: ImportBatch) => void): UseI
     };
   }, []);
 
-  return { batch, isPolling, error, startPolling, stopPolling };
+  return { batch, isPolling, error, startPolling, stopPolling, resetStatus };
 }

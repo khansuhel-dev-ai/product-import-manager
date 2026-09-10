@@ -57,7 +57,14 @@ export function FileUpload({
       return;
     }
     if (selectedFile && !isUploading) {
-      onUpload(selectedFile);
+      const fileToUpload = selectedFile;
+      // Clear file picker state immediately upon triggering upload
+      setSelectedFile(null);
+      setFileError(null);
+      if (inputRef.current) {
+        inputRef.current.value = '';
+      }
+      onUpload(fileToUpload);
     }
   };
 

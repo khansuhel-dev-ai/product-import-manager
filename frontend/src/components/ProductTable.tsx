@@ -232,13 +232,13 @@ export function ProductTable({
                       title="Select all on this page"
                     />
                   </th>
-                  <th>SKU</th>
-                  <th>Name</th>
-                  <th>Category</th>
-                  <th>Price</th>
-                  <th>Qty</th>
-                  <th>Updated</th>
-                  <th style={{ width: '130px', textAlign: 'center' }}>Actions</th>
+                  <th className="col-sku">SKU</th>
+                  <th className="col-name">Name</th>
+                  <th className="col-category">Category</th>
+                  <th className="col-price text-right">Price</th>
+                  <th className="col-qty text-right">Qty</th>
+                  <th className="col-updated">Updated</th>
+                  <th className="col-actions text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -253,28 +253,28 @@ export function ProductTable({
                           onChange={() => handleSelectRow(product.id)}
                         />
                       </td>
-                      <td className="mono">{product.sku}</td>
-                      <td>
+                      <td className="mono col-sku">{product.sku}</td>
+                      <td className="col-name">
                         <strong>{product.name}</strong>
                       </td>
-                      <td>{product.category}</td>
-                      <td className="text-right">{formatPrice(product.price)}</td>
-                      <td className="text-right">{product.quantity}</td>
-                      <td className="text-muted">{formatDate(product.updated_at)}</td>
-                      <td className="text-center actions-cell">
+                      <td className="col-category">{product.category}</td>
+                      <td className="text-right col-price">{formatPrice(product.price)}</td>
+                      <td className="text-right col-qty">{product.quantity}</td>
+                      <td className="text-muted col-updated">{formatDate(product.updated_at)}</td>
+                      <td className="text-center col-actions actions-cell">
                         <button
                           className="btn-icon btn-icon-edit"
                           title="Edit Product"
                           onClick={() => setEditingProduct(product)}
                         >
-                          ✏️ Edit
+                          <span>✏️</span> <span>Edit</span>
                         </button>
                         <button
                           className="btn-icon btn-icon-delete"
                           title="Delete Product"
                           onClick={() => handleDeleteSingle(product)}
                         >
-                          🗑️
+                          <span>🗑️</span>
                         </button>
                       </td>
                     </tr>

@@ -8,7 +8,7 @@ import type {
   BulkDeleteInput,
 } from '../types/product';
 
-export async function getProducts(page = 1, perPage = 25): Promise<PaginatedResponse<Product>> {
+export async function getProducts(page = 1, perPage = 10): Promise<PaginatedResponse<Product>> {
   return api.get<PaginatedResponse<Product>>(`/products?page=${page}&per_page=${perPage}`);
 }
 

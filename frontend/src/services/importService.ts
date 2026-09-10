@@ -17,7 +17,7 @@ export async function getBatchErrors(batchId: number): Promise<{ data: ImportErr
 export async function getBatchProducts(
   batchId: number,
   page = 1,
-  perPage = 25
+  perPage = 10
 ): Promise<PaginatedResponse<Product>> {
   return api.get<PaginatedResponse<Product>>(`/products/import/${batchId}/products?page=${page}&per_page=${perPage}`);
 }

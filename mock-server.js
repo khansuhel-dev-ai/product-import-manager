@@ -2,7 +2,7 @@ const http = require('http');
 const URL = require('url').URL;
 
 const PORT = 8000;
-const MAX_PRODUCTS = 500;
+const MAX_PRODUCTS = 1000;
 
 // In-memory state matching Laravel DB tables
 const products = [
@@ -37,7 +37,7 @@ const server = http.createServer((req, res) => {
   // GET /api/products
   if (req.method === 'GET' && urlPath === '/api/products') {
     const page = parseInt(url.searchParams.get('page') || '1', 10);
-    const perPage = parseInt(url.searchParams.get('per_page') || '25', 10);
+    const perPage = parseInt(url.searchParams.get('per_page') || '10', 10);
     
     const startIndex = (page - 1) * perPage;
     const endIndex = startIndex + perPage;
@@ -106,7 +106,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && matchBatchProducts) {
     const id = parseInt(matchBatchProducts[1], 10);
     const page = parseInt(url.searchParams.get('page') || '1', 10);
-    const perPage = parseInt(url.searchParams.get('per_page') || '25', 10);
+    const perPage = parseInt(url.searchParams.get('per_page') || '10', 10);
     
     const batchProds = products.filter(p => p.import_batch_id === id);
     const startIndex = (page - 1) * perPage;
@@ -116,7 +116,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       data: paginated,
-      meta: { current_page: page, last_page: lastPage, per_page: perPage, total: batchProds.length },
+      meta: { current_page: page, last_page: lastPage, per_page: perPage, total: batchProds.length, max_limit: MAX_PRODUCTS },
       links: { first: null, last: null, prev: null, next: null }
     }));
     return;
@@ -323,7 +323,7 @@ const server = http.createServer((req, res) => {
 
       const dataRows = csvLines.slice(1);
 
-      // Check 500 product limit
+      // Check 1000 product limit
       const incomingSkus = new Set();
       dataRows.forEach(line => {
         const parts = line.split(',').map(p => p.trim());

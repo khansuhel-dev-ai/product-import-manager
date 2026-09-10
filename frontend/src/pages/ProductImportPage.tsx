@@ -4,7 +4,6 @@ import { SampleDownload } from '../components/SampleDownload';
 import { ImportStatus } from '../components/ImportStatus';
 import { ImportErrors } from '../components/ImportErrors';
 import { ProductTable } from '../components/ProductTable';
-import { StorageLimitBanner } from '../components/StorageLimitBanner';
 import { useImportStatus } from '../hooks/useImportStatus';
 import { uploadCsv } from '../services/importService';
 import type { ImportError } from '../types/import';
@@ -16,9 +15,9 @@ export function ProductImportPage() {
   const [syncErrors, setSyncErrors] = useState<ImportError[]>([]);
   const [productRefreshKey, setProductRefreshKey] = useState(0);
 
-  // Storage count tracking
+  // Storage count tracking (limit set to 1000)
   const [totalProducts, setTotalProducts] = useState(0);
-  const [maxLimit, setMaxLimit] = useState(500);
+  const [maxLimit, setMaxLimit] = useState(1000);
 
   // Auto refresh table when async polling reaches completion
   const handleImportComplete = useCallback(() => {
@@ -94,14 +93,13 @@ export function ProductImportPage() {
       </header>
 
       <main className="app-main">
-        {/* Storage Limit Banner Notice */}
-        <StorageLimitBanner totalCount={totalProducts} maxLimit={maxLimit} />
-
         <div className="top-section">
           <FileUpload
             onUpload={handleUpload}
             isUploading={isUploading}
             isLimitReached={isLimitReached}
+            totalProducts={totalProducts}
+            maxLimit={maxLimit}
           />
           <SampleDownload />
         </div>
@@ -150,7 +148,7 @@ export function ProductImportPage() {
           <ImportErrors batchId={currentBatchId} failedRows={failedRows} />
         )}
 
-        {/* Main Product Table - Shows All Products (25 per page) */}
+        {/* Main Product Table - Shows All Products (10 per page default) */}
         <ProductTable
           title="All Products Catalog"
           refreshKey={productRefreshKey}
@@ -160,7 +158,7 @@ export function ProductImportPage() {
       </main>
 
       <footer className="app-footer">
-        <p>Product Import Manager — Maximum Storage Limit: 500 Products</p>
+        <p>Product Import Manager — Maximum Storage Limit: 1,000 Products</p>
       </footer>
     </div>
   );

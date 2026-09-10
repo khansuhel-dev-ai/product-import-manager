@@ -1,4 +1,4 @@
-const MAX_PRODUCTS = 500;
+const MAX_PRODUCTS = 1000;
 
 const products = [
   { id: 1, sku: 'SKU-1001', name: 'Ronaldo Home Jersey', category: 'Football Jerseys', price: 1999.00, quantity: 25, import_batch_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
   // GET /api/products
   if (req.method === 'GET' && (urlPath === '/api/products' || urlPath === '/products')) {
     const page = parseInt(urlObj.searchParams.get('page') || '1', 10);
-    const perPage = parseInt(urlObj.searchParams.get('per_page') || '25', 10);
+    const perPage = parseInt(urlObj.searchParams.get('per_page') || '10', 10);
     
     const startIndex = (page - 1) * perPage;
     const endIndex = startIndex + perPage;
@@ -95,7 +95,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET' && matchBatchProducts) {
     const id = parseInt(matchBatchProducts[1], 10);
     const page = parseInt(urlObj.searchParams.get('page') || '1', 10);
-    const perPage = parseInt(urlObj.searchParams.get('per_page') || '25', 10);
+    const perPage = parseInt(urlObj.searchParams.get('per_page') || '10', 10);
     
     const batchProds = products.filter(p => p.import_batch_id === id);
     const startIndex = (page - 1) * perPage;
@@ -104,7 +104,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       data: paginated,
-      meta: { current_page: page, last_page: lastPage, per_page: perPage, total: batchProds.length },
+      meta: { current_page: page, last_page: lastPage, per_page: perPage, total: batchProds.length, max_limit: MAX_PRODUCTS },
       links: { first: null, last: null, prev: null, next: null }
     });
   }
@@ -275,7 +275,7 @@ export default async function handler(req, res) {
 
     const dataRows = csvLines.slice(1);
 
-    // Calculate potential new SKUs to check 500 limit
+    // Check 1000 product limit
     const incomingSkus = new Set();
     dataRows.forEach(line => {
       const parts = line.split(',').map(p => p.trim());

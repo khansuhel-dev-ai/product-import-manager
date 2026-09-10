@@ -5,6 +5,8 @@ interface FileUploadProps {
   isUploading: boolean;
   maxSizeMB?: number;
   isLimitReached?: boolean;
+  totalProducts?: number;
+  maxLimit?: number;
 }
 
 const ACCEPTED_TYPES = '.csv';
@@ -14,6 +16,8 @@ export function FileUpload({
   isUploading,
   maxSizeMB = 2,
   isLimitReached = false,
+  totalProducts = 0,
+  maxLimit = 1000,
 }: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -29,7 +33,7 @@ export function FileUpload({
     }
 
     if (isLimitReached) {
-      setFileError('System limit reached (500 products). Please delete existing products before uploading more.');
+      setFileError(`System limit reached (${maxLimit} products). Please delete existing products before uploading more.`);
       setSelectedFile(null);
       return;
     }
@@ -53,12 +57,11 @@ export function FileUpload({
 
   const handleUpload = () => {
     if (isLimitReached) {
-      setFileError('System limit reached (500 products). Please delete existing products first.');
+      setFileError(`System limit reached (${maxLimit} products). Please delete existing products first.`);
       return;
     }
     if (selectedFile && !isUploading) {
       const fileToUpload = selectedFile;
-      // Clear file picker state immediately upon triggering upload
       setSelectedFile(null);
       setFileError(null);
       if (inputRef.current) {
@@ -84,7 +87,32 @@ export function FileUpload({
 
   return (
     <div className="card">
-      <h2>Upload CSV</h2>
+      <div className="card-title-row">
+        <h2>Upload CSV</h2>
+        
+        {/* Info Warning Icon with Hover Tooltip Popover */}
+        <div className="info-tooltip-wrapper">
+          <span className={`info-icon ${isLimitReached ? 'icon-warning' : ''}`}>
+            {isLimitReached ? '⚠️' : 'ℹ️'}
+          </span>
+          <div className="tooltip-popup">
+            <div className="tooltip-header">
+              <strong>System Storage Notice</strong>
+            </div>
+            <p>
+              Maximum product catalog limit: <strong>{maxLimit} products</strong>.
+            </p>
+            <p>
+              Currently storing: <strong>{totalProducts}</strong> / {maxLimit} products.
+            </p>
+            {isLimitReached && (
+              <p className="tooltip-alert">
+                ⚠️ Limit reached! Delete products to enable new CSV imports.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
 
       <div className="file-input-wrapper">
         <input
@@ -97,7 +125,7 @@ export function FileUpload({
         />
         <label htmlFor="csv-file-input" className={`file-input-label ${isLimitReached ? 'disabled' : ''}`}>
           {isLimitReached
-            ? '⚠️ Upload disabled (500 product limit reached)'
+            ? `⚠️ Upload disabled (${maxLimit} product limit reached)`
             : selectedFile
             ? selectedFile.name
             : 'Choose a CSV file...'}
@@ -112,11 +140,6 @@ export function FileUpload({
       )}
 
       {fileError && <p className="error-text">{fileError}</p>}
-      {isLimitReached && (
-        <p className="error-text card-alert">
-          Limit reached: The system cannot store more than 500 products. Delete existing products to enable CSV import.
-        </p>
-      )}
 
       <p className="help-text">
         Accepted: CSV files up to {maxSizeMB} MB

@@ -35,7 +35,7 @@ export function ProductTable({
 }: ProductTableProps) {
   const [data, setData] = useState<PaginatedResponse<Product> | null>(null);
   const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(25);
+  const [perPage, setPerPage] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export function ProductTable({
 
       setData(response);
       if (onTotalCountChange) {
-        onTotalCountChange(response.meta.total, response.meta.max_limit);
+        onTotalCountChange(response.meta.total, response.meta.max_limit || 1000);
       }
     } catch {
       setError('Failed to load products.');
@@ -192,7 +192,7 @@ export function ProductTable({
           <h2>{title}</h2>
           {data && (
             <p className="subtitle">
-              Total Products: <strong>{data.meta.total}</strong> / 500 max
+              Total Products: <strong>{data.meta.total}</strong> / {data.meta.max_limit || 1000} max
             </p>
           )}
         </div>
@@ -201,7 +201,7 @@ export function ProductTable({
           <button
             className="btn btn-primary"
             onClick={() => setIsAddModalOpen(true)}
-            disabled={Boolean(data && data.meta.total >= 500)}
+            disabled={Boolean(data && data.meta.total >= (data.meta.max_limit || 1000))}
           >
             ➕ Add Product
           </button>

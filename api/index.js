@@ -11,6 +11,50 @@ const batchErrors = new Map();
 let batchIdCounter = 1;
 let productIdCounter = 4;
 
+function processImportRows(dataRows, batchId) {
+  const errors = [];
+  let successCount = 0;
+  let failCount = 0;
+  const seenSkus = new Set();
+
+  dataRows.forEach((line, idx) => {
+    const rowNum = idx + 2;
+    const parts = line.split(',').map(p => p.trim());
+    if (parts.length < 5) return;
+    const [sku, name, category, priceStr, qtyStr] = parts;
+    const price = parseFloat(priceStr);
+    const qty = parseInt(qtyStr, 10);
+
+    if (!sku) {
+      errors.push({ id: errors.length + 1, import_batch_id: batchId, row_number: rowNum, field: 'sku', error_message: 'SKU is required.', row_data: { sku, name, category, price: priceStr, quantity: qtyStr } });
+      failCount++;
+      return;
+    }
+    if (seenSkus.has(sku.toUpperCase())) {
+      errors.push({ id: errors.length + 1, import_batch_id: batchId, row_number: rowNum, field: 'sku', error_message: 'Duplicate SKU in uploaded file.', row_data: { sku, name, category, price: priceStr, quantity: qtyStr } });
+      failCount++;
+      return;
+    }
+    if (isNaN(price) || price < 0) {
+      errors.push({ id: errors.length + 1, import_batch_id: batchId, row_number: rowNum, field: 'price', error_message: 'Price must be a positive number.', row_data: { sku, name, category, price: priceStr, quantity: qtyStr } });
+      failCount++;
+      return;
+    }
+
+    seenSkus.add(sku.toUpperCase());
+    successCount++;
+
+    const existingIdx = products.findIndex(p => p.sku === sku);
+    if (existingIdx !== -1) {
+      products[existingIdx] = { ...products[existingIdx], name, category, price, quantity: qty, import_batch_id: batchId, updated_at: new Date().toISOString() };
+    } else {
+      products.push({ id: productIdCounter++, sku, name, category, price, quantity: qty, import_batch_id: batchId, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+    }
+  });
+
+  return { successCount, failCount, errors };
+}
+
 function setCorsHeaders(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -315,70 +359,36 @@ export default async function handler(req, res) {
       updated_at: new Date().toISOString()
     };
 
-    const errors = [];
-    let successCount = 0;
-    let failCount = 0;
-    const seenSkus = new Set();
-
-    dataRows.forEach((line, idx) => {
-      const rowNum = idx + 2;
-      const parts = line.split(',').map(p => p.trim());
-      if (parts.length < 5) return;
-      const [sku, name, category, priceStr, qtyStr] = parts;
-      const price = parseFloat(priceStr);
-      const qty = parseInt(qtyStr, 10);
-
-      if (!sku) {
-        errors.push({ id: errors.length + 1, import_batch_id: batchId, row_number: rowNum, field: 'sku', error_message: 'SKU is required.', row_data: { sku, name, category, price: priceStr, quantity: qtyStr } });
-        failCount++;
-        return;
-      }
-      if (seenSkus.has(sku.toUpperCase())) {
-        errors.push({ id: errors.length + 1, import_batch_id: batchId, row_number: rowNum, field: 'sku', error_message: 'Duplicate SKU in uploaded file.', row_data: { sku, name, category, price: priceStr, quantity: qtyStr } });
-        failCount++;
-        return;
-      }
-      if (isNaN(price) || price < 0) {
-        errors.push({ id: errors.length + 1, import_batch_id: batchId, row_number: rowNum, field: 'price', error_message: 'Price must be a positive number.', row_data: { sku, name, category, price: priceStr, quantity: qtyStr } });
-        failCount++;
-        return;
-      }
-
-      seenSkus.add(sku.toUpperCase());
-      successCount++;
-
-      const existingIdx = products.findIndex(p => p.sku === sku);
-      if (existingIdx !== -1) {
-        products[existingIdx] = { ...products[existingIdx], name, category, price, quantity: qty, import_batch_id: batchId, updated_at: new Date().toISOString() };
-      } else {
-        products.push({ id: productIdCounter++, sku, name, category, price, quantity: qty, import_batch_id: batchId, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
-      }
-    });
-
-    batch.successful_rows = successCount;
-    batch.failed_rows = failCount;
-    if (failCount > 0 && successCount > 0) batch.status = 'completed_with_errors';
-    if (failCount > 0 && successCount === 0) batch.status = 'failed';
-
     batches.set(batchId, batch);
-    batchErrors.set(batchId, errors);
+    batchErrors.set(batchId, []);
 
     if (isQueued) {
-      setTimeout(() => {
-        batch.status = 'processing';
-        setTimeout(() => {
-          batch.processed_rows = totalRows;
-          batch.status = failCount > 0 ? 'completed_with_errors' : 'completed';
-          batch.completed_at = new Date().toISOString();
-        }, 3000);
-      }, 2000);
-
-      return res.status(202).json({
+      res.status(202).json({
         message: 'File uploaded successfully and queued for processing.',
         batch_id: batchId,
         status: 'pending'
       });
+
+      setTimeout(() => {
+        batch.status = 'processing';
+        setTimeout(() => {
+          const { successCount, failCount, errors } = processImportRows(dataRows, batchId);
+          batch.processed_rows = totalRows;
+          batch.successful_rows = successCount;
+          batch.failed_rows = failCount;
+          batch.status = failCount > 0 && successCount === 0 ? 'failed' : failCount > 0 ? 'completed_with_errors' : 'completed';
+          batch.completed_at = new Date().toISOString();
+          batchErrors.set(batchId, errors);
+        }, 2500);
+      }, 1500);
+      return;
     } else {
+      const { successCount, failCount, errors } = processImportRows(dataRows, batchId);
+      batch.successful_rows = successCount;
+      batch.failed_rows = failCount;
+      batch.status = failCount > 0 && successCount === 0 ? 'failed' : failCount > 0 ? 'completed_with_errors' : 'completed';
+      batchErrors.set(batchId, errors);
+
       return res.status(200).json({
         message: `Import completed. ${successCount} product(s) imported.`,
         batch_id: batchId,

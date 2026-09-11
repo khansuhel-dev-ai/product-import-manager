@@ -65,6 +65,13 @@ You can run this application on any machine using **Option A (Fastest - Node.js 
 
 No PHP or MySQL setup is required for Option A.
 
+#### 💡 Why the Mock Server Was Added
+The standalone Node.js mock server (`mock-server.js`) was added to allow instant local testing and cloud serverless deployment (e.g., Vercel) out of the box without requiring PHP 8.2, Composer, or MySQL setup.
+
+#### 💾 How Data is Stored In-Memory
+- **In-Memory Storage**: Products, import batches, and validation errors are stored directly in Node.js runtime memory using JavaScript arrays and `Map` data structures (`products`, `batches`, `batchErrors`).
+- **Persistence**: Data stays active in memory while the server process is running and resets when restarted, providing real-time CRUD operations without database installation.
+
 #### Prerequisites
 - **Node.js**: v18.0.0 or higher
 - **npm**: v9.0.0 or higher
